@@ -6,4 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <!-- no "contentfiles": stops Roslyn's BuildHost-* folders from being added to the project and copied to bin -->
+      <IncludeAssets>runtime; build; native; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MMS.Play.Infrastructure\MMS.Play.Infrastructure.csproj" />
+    <ProjectReference Include="..\MMS.Play.Presentation\MMS.Play.Presentation.csproj" />
+  </ItemGroup>
+
 </Project>
