@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MMS.Play.Contracts/MMS.Play.Contracts.csproj" />
+    <Project Path="src/MMS.Play.Domain.Model/MMS.Play.Domain.Model.csproj" />
+    <Project Path="src/MMS.Play.Domain.Services/MMS.Play.Domain.Services.csproj" />
+    <Project Path="src/MMS.Play.Infrastructure/MMS.Play.Infrastructure.csproj" />
+    <Project Path="src/MMS.Play.Jobs/MMS.Play.Jobs.csproj" />
+    <Project Path="src/MMS.Play.Persistence/MMS.Play.Persistence.csproj" />
+    <Project Path="src/MMS.Play.Presentation/MMS.Play.Presentation.csproj" />
+    <Project Path="src/MMS.Play.Web/MMS.Play.Web.csproj" />
+  </Folder>
+</Solution>
