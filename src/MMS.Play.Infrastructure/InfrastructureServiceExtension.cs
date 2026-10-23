@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MMS.Play.Infrastructure.BackgroundJobs;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Logging;
+using MMS.Play.Infrastructure.BackgroundJobs;
 using MMS.Play.Infrastructure.Logging;
 using MMS.Play.Infrastructure.Models.Settings;
 using MMS.Play.Infrastructure.Persistence;
@@ -30,7 +30,11 @@ public static class InfrastructureServiceExtension
         services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<DatabaseInitializer>();
 
-        services.Configure<LogCleanupSettings>(configuration.GetSection(LogCleanupSettings.SectionName));
+        services.AddOptions<LogCleanupSettings>()
+            .Bind(configuration.GetSection(LogCleanupSettings.SectionName))
+            .Configure(settings => settings.LogFilePath = configuration[LogCleanupSettings.SerilogFilePathKey])
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddScoped<ILogCleanupService, LogCleanupService>();
 
         services.AddBackgroundJobs(configuration, connectionString);
@@ -58,18 +62,20 @@ public static class InfrastructureServiceExtension
 
     private static void AddBackgroundJobs(this IServiceCollection services, IConfiguration configuration, string connectionString)
     {
-        var section = configuration.GetSection(HangfireSettings.SectionName);
-        var settings = section.Get<HangfireSettings>() ?? new HangfireSettings();
-        services.Configure<HangfireSettings>(section);
+        services.AddOptions<HangfireSettings>()
+            .Bind(configuration.GetSection(HangfireSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(settings => settings.Dashboard.Path.StartsWith('/'), "Hangfire:Dashboard:Path must start with '/'")
+            .ValidateOnStart();
 
         // Hangfire creates and upgrades its own tables in a separate schema, they are not part of EF migrations
-        services.AddHangfire(config => config
+        services.AddHangfire((serviceProvider, config) => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings()
             .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
             {
-                SchemaName = settings.SchemaName,
+                SchemaName = serviceProvider.GetRequiredService<IOptions<HangfireSettings>>().Value.SchemaName,
                 PrepareSchemaIfNecessary = true,
                 CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
                 SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
@@ -78,8 +84,9 @@ public static class InfrastructureServiceExtension
                 DisableGlobalLocks = true
             }));
 
-        services.AddHangfireServer(options =>
+        services.AddHangfireServer((serviceProvider, options) =>
         {
+            var settings = serviceProvider.GetRequiredService<IOptions<HangfireSettings>>().Value;
             options.WorkerCount = settings.WorkerCount;
             options.Queues = settings.Queues;
         });

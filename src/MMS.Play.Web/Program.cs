@@ -11,7 +11,7 @@ try
 
     builder.Services.AddBaseServices();
     builder.Services.AddInfrastructureService(builder.Configuration);
-    builder.Services.AddJobs();
+    builder.Services.AddJobs(builder.Configuration);
 
     // gives running jobs time to observe the cancellation token on shutdown
     builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(30));

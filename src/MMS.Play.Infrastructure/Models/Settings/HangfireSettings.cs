@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MMS.Play.Infrastructure.Models.Settings;
 
 /// <summary>
@@ -7,9 +9,15 @@ public class HangfireSettings
 {
     public const string SectionName = "Hangfire";
 
+    [Required]
     public string SchemaName { get; set; } = "hangfire";
+
+    [Range(1, 100)]
     public int WorkerCount { get; set; } = 5;
+
+    [MinLength(1)]
     public string[] Queues { get; set; } = ["default"];
+
     public HangfireDashboardSettings Dashboard { get; set; } = new();
 }
 

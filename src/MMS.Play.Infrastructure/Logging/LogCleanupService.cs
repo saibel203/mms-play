@@ -49,7 +49,18 @@ public partial class LogCleanupService(
 
     private int DeleteLogFiles(DateTime cutoffUtc, CancellationToken cancellationToken)
     {
-        var directory = new DirectoryInfo(Path.GetFullPath(_settings.LogFilesDirectory));
+        if (string.IsNullOrWhiteSpace(_settings.LogFilePath))
+        {
+            LogFileSinkNotConfigured(logger, LogCleanupSettings.SerilogFilePathKey);
+            return 0;
+        }
+
+        // The rolling file sink inserts the date (and _NNN on size roll) before the extension:
+        // "logs/log-.txt" -> "logs/log-20261023.txt", "logs/log-20261023_001.txt"
+        var fullPath = Path.GetFullPath(_settings.LogFilePath);
+        var directory = new DirectoryInfo(Path.GetDirectoryName(fullPath)!);
+        var searchPattern = $"{Path.GetFileNameWithoutExtension(fullPath)}*{Path.GetExtension(fullPath)}";
+
         if (!directory.Exists)
         {
             LogDirectoryNotFound(logger, directory.FullName);
@@ -58,7 +69,7 @@ public partial class LogCleanupService(
 
         var deleted = 0;
 
-        foreach (var file in directory.EnumerateFiles(_settings.LogFilesPattern))
+        foreach (var file in directory.EnumerateFiles(searchPattern))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (file.LastWriteTimeUtc >= cutoffUtc) continue;
@@ -81,6 +92,9 @@ public partial class LogCleanupService(
     // Source-generated logging: arguments are evaluated only when the level is enabled (CA1873)
     [LoggerMessage(Level = LogLevel.Information, Message = "Deleted {Count} log rows older than {CutoffUtc:u}")]
     private static partial void LogRowsDeleted(ILogger logger, int count, DateTime cutoffUtc);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Serilog file sink is not configured ({ConfigurationKey}), skipping file cleanup")]
+    private static partial void LogFileSinkNotConfigured(ILogger logger, string configurationKey);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Log files directory {Directory} does not exist, skipping file cleanup")]
     private static partial void LogDirectoryNotFound(ILogger logger, string directory);
