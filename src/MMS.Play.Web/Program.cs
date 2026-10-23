@@ -1,4 +1,5 @@
 using MMS.Play.Infrastructure;
+using MMS.Play.Jobs;
 using MMS.Play.Web;
 using Serilog;
 
@@ -10,18 +11,26 @@ try
 
     builder.Services.AddBaseServices();
     builder.Services.AddInfrastructureService(builder.Configuration);
+    builder.Services.AddJobs(builder.Configuration);
+
+    // gives running jobs time to observe the cancellation token on shutdown
+    builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(30));
 
     var app = builder.Build();
 
     if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
         await app.Services.InitializeDatabaseAsync();
-    
+
+    app.Services.RegisterRecurringJobs();
+
     app.UseSerilogRequestLogging();
 
     app.UseHttpsRedirection();
     app.UseCors();
 
     app.UseRouting();
+    app.UseJobsDashboard();
+
     app.MapControllers();
 
     await app.RunAsync();
