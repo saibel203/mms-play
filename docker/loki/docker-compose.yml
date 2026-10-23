@@ -1,6 +1,7 @@
-# Local log stack for development: Loki stores logs, Grafana shows them.
+# Local observability stack for development: Loki stores logs, Prometheus stores metrics, Grafana shows both.
 # Start:  docker compose -f docker/loki/docker-compose.yml up -d
-# Grafana: http://localhost:3000 (anonymous admin access, no login)
+# Grafana: http://localhost:3000 (anonymous admin access, no login), dashboard "MMS.Play API"
+# Prometheus: http://localhost:9090
 
 services:
   loki:
@@ -11,6 +12,22 @@ services:
       - "3100:3100"
     volumes:
       - loki-data:/loki
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: mms-play-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      # the API pushes metrics to /api/v1/otlp/v1/metrics instead of being scraped
+      - --web.enable-otlp-receiver
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
     restart: unless-stopped
 
   grafana:
@@ -24,11 +41,15 @@ services:
       - GF_AUTH_DISABLE_LOGIN_FORM=true
     volumes:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./dashboards:/etc/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       - loki
+      - prometheus
     restart: unless-stopped
 
 volumes:
   loki-data:
+  prometheus-data:
   grafana-data:

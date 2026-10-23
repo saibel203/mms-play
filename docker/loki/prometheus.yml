@@ -1,0 +1,11 @@
+# Metrics are pushed by the API over OTLP (--web.enable-otlp-receiver), so there are no scrape targets.
+# Metric and label names are translated from OpenTelemetry: http.server.request.duration -> http_server_request_duration_seconds,
+# http.route -> http_route, service.name -> job label.
+
+global:
+  evaluation_interval: 30s
+
+storage:
+  tsdb:
+    # pushed samples may arrive slightly late or out of order, e.g. after an API restart
+    out_of_order_time_window: 30m
