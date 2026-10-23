@@ -5,7 +5,6 @@
     <Project Path="src/MMS.Play.Domain.Services/MMS.Play.Domain.Services.csproj" />
     <Project Path="src/MMS.Play.Infrastructure/MMS.Play.Infrastructure.csproj" />
     <Project Path="src/MMS.Play.Jobs/MMS.Play.Jobs.csproj" />
-    <Project Path="src/MMS.Play.Persistence/MMS.Play.Persistence.csproj" />
     <Project Path="src/MMS.Play.Presentation/MMS.Play.Presentation.csproj" />
     <Project Path="src/MMS.Play.Web/MMS.Play.Web.csproj" />
   </Folder>
