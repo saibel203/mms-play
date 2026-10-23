@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Hangfire.Core" Version="1.8.25" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MMS.Play.Infrastructure\MMS.Play.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

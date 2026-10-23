@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MMS.Play.Infrastructure\MMS.Play.Infrastructure.csproj" />
+    <ProjectReference Include="..\MMS.Play.Jobs\MMS.Play.Jobs.csproj" />
     <ProjectReference Include="..\MMS.Play.Presentation\MMS.Play.Presentation.csproj" />
   </ItemGroup>
 
