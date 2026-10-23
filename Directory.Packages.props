@@ -35,6 +35,15 @@
     <PackageVersion Include="Serilog.Sinks.MSSqlServer" Version="9.0.3" />
   </ItemGroup>
 
+  <ItemGroup Label="API versioning">
+    <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
+    <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Swagger">
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Transitive pins">
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <!-- Microsoft.Data.SqlClient 6.1.7 brings 9.0.11 (NU1902, NU1903) -->

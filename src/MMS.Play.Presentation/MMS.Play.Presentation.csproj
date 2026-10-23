@@ -1,5 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <!-- emits MMS.Play.*.xml next to the dll, Swagger reads summaries/remarks from it -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML comment for publicly visible member - documenting every public type is not required -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <Folder Include="Middlewares\" />
   </ItemGroup>
@@ -7,6 +14,12 @@
   <ItemGroup>
     <!-- since ASP.NET Core 3.0 MVC ships with the shared framework, Microsoft.AspNetCore.Mvc 2.x packages are obsolete -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
 </Project>
