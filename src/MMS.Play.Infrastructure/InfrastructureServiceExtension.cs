@@ -4,12 +4,18 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Logging;
 using MMS.Play.Infrastructure.BackgroundJobs;
+using MMS.Play.Infrastructure.HealthChecks;
 using MMS.Play.Infrastructure.Logging;
+using MMS.Play.Infrastructure.Metrics;
 using MMS.Play.Infrastructure.Models.Settings;
 using MMS.Play.Infrastructure.Persistence;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Serilog;
 
 namespace MMS.Play.Infrastructure;
@@ -17,6 +23,7 @@ namespace MMS.Play.Infrastructure;
 public static class InfrastructureServiceExtension
 {
     private const string ConnectionStringName = "DefaultConnection";
+    private static readonly TimeSpan HealthCheckTimeout = TimeSpan.FromSeconds(5);
 
     public static IServiceCollection AddInfrastructureService(this IServiceCollection services, IConfiguration configuration)
     {
@@ -38,6 +45,27 @@ public static class InfrastructureServiceExtension
         services.AddScoped<ILogCleanupService, LogCleanupService>();
 
         services.AddBackgroundJobs(configuration, connectionString);
+
+        services.AddHealthChecks()
+            // the API cannot serve requests without the database
+            .AddDbContextCheck<ApplicationDbContext>("database", HealthStatus.Unhealthy)
+            // without workers jobs pile up, but the API itself keeps working
+            .AddCheck<HangfireHealthCheck>("hangfire", HealthStatus.Degraded);
+
+        // the connection string allows a 900s connect timeout, a probe must fail long before that
+        services.PostConfigure<HealthCheckServiceOptions>(options =>
+        {
+            foreach (var registration in options.Registrations)
+            {
+                registration.Timeout = HealthCheckTimeout;
+
+                // the timeout only cancels a token, the wrapper makes sure nobody keeps waiting for a check that ignores it
+                var factory = registration.Factory;
+                registration.Factory = serviceProvider => new TimeoutHealthCheck(factory(serviceProvider));
+            }
+        });
+
+        services.AddOpenTelemetryMetrics(configuration);
 
         return services;
     }
@@ -90,6 +118,44 @@ public static class InfrastructureServiceExtension
             options.WorkerCount = settings.WorkerCount;
             options.Queues = settings.Queues;
         });
+    }
+
+    private static void AddOpenTelemetryMetrics(this IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(MetricsSettings.SectionName);
+
+        services.AddOptions<MetricsSettings>()
+            .Bind(section)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // decides what gets registered and feeds the OpenTelemetry builder, so it is read before the container is built
+        var settings = section.Get<MetricsSettings>() ?? new MetricsSettings();
+        if (!settings.Enabled)
+            return;
+
+        services.AddSingleton<IHealthCheckPublisher, HealthCheckMetricsPublisher>();
+
+        services.AddOpenTelemetry()
+            // a fixed instance id keeps the same series across restarts instead of a new random one each time
+            .ConfigureResource(resource => resource.AddService(
+                settings.ServiceName,
+                autoGenerateServiceInstanceId: false,
+                serviceInstanceId: Environment.MachineName))
+            .WithMetrics(metrics => metrics
+                // .NET emits these meters itself, no instrumentation packages are needed
+                .AddMeter(
+                    "Microsoft.AspNetCore.Hosting",     // http.server.request.duration: rate, latency, status codes per route
+                    "Microsoft.AspNetCore.Diagnostics", // aspnetcore.diagnostics.exceptions: exceptions caught by UseExceptionHandler
+                    "System.Runtime",                   // memory, GC, CPU, thread pool
+                    HealthCheckMetricsPublisher.MeterName)
+                // pushed over OTLP, so Prometheus does not need to reach the API
+                .AddOtlpExporter((exporter, reader) =>
+                {
+                    exporter.Endpoint = new Uri(settings.OtlpEndpoint);
+                    exporter.Protocol = OtlpExportProtocol.HttpProtobuf;
+                    reader.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = settings.ExportIntervalSeconds * 1000;
+                }));
     }
 
     /// <summary>

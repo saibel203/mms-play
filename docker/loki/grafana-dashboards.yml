@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: MMS.Play
+    type: file
+    # dashboards are edited as JSON files in docker/loki/dashboards, changes made in the UI are not saved back
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

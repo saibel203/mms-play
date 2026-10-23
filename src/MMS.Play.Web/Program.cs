@@ -38,6 +38,7 @@ try
     app.UseRouting();
     app.UseJobsDashboard();
 
+    app.MapHealthEndpoints();
     app.MapControllers();
 
     await app.RunAsync();

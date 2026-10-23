@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using MMS.Play.Infrastructure.Models.Settings;
+using MMS.Play.Presentation;
 using MMS.Play.Presentation.Models.Settings;
 using Serilog;
 using Serilog.Events;
@@ -9,7 +10,7 @@ namespace MMS.Play.Web;
 public static class RequestLoggingExtension
 {
     /// <summary>
-    /// Serilog request logging that skips Swagger and Hangfire dashboard traffic unless the request failed.
+    /// Serilog request logging that skips health probes, Swagger and Hangfire dashboard traffic unless the request failed.
     /// </summary>
     public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder app)
     {
@@ -33,8 +34,9 @@ public static class RequestLoggingExtension
         var swagger = serviceProvider.GetRequiredService<IOptions<SwaggerSettings>>().Value;
         var hangfire = serviceProvider.GetRequiredService<IOptions<HangfireSettings>>().Value.Dashboard;
 
+        // probes hit the health endpoints every few seconds
         // swagger.json is always served from /swagger, the UI can be moved by RoutePrefix
-        List<PathString> paths = ["/swagger"];
+        List<PathString> paths = [HealthCheckExtension.BasePath, "/swagger"];
 
         // an empty prefix serves the UI from the root, which must not silence every request
         if (!string.IsNullOrEmpty(swagger.RoutePrefix))

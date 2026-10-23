@@ -19,6 +19,7 @@ public class TestController : BaseController
     [ProducesResponseType<string>(StatusCodes.Status200OK)]
     public IActionResult Get()
     {
-        return Ok("Tesat");
+        throw new InvalidOperationException("TestException");
+        return Ok("Test");
     }
 }
