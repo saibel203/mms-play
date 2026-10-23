@@ -1,5 +1,6 @@
 using MMS.Play.Infrastructure;
 using MMS.Play.Jobs;
+using MMS.Play.Presentation;
 using MMS.Play.Web;
 using Serilog;
 
@@ -9,7 +10,7 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Services.AddBaseServices();
+    builder.Services.AddPresentation(builder.Configuration);
     builder.Services.AddInfrastructureService(builder.Configuration);
     builder.Services.AddJobs(builder.Configuration);
 
@@ -23,7 +24,13 @@ try
 
     app.Services.RegisterRecurringJobs();
 
-    app.UseSerilogRequestLogging();
+    // outermost, so errors from every middleware below are turned into problem details
+    app.UseExceptionHandler();
+    app.UseStatusCodePages();
+
+    app.UseRequestLogging();
+
+    app.UseApiDocumentation();
 
     app.UseHttpsRedirection();
     app.UseCors();
