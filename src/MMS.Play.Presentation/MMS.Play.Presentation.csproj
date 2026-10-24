@@ -22,4 +22,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MMS.Play.Contracts\MMS.Play.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using Hangfire.Dashboard;
+using MMS.Play.Contracts.Extensions;
 
 namespace MMS.Play.Infrastructure.BackgroundJobs;
 
@@ -28,7 +29,7 @@ public class BasicAuthDashboardAuthorizationFilter(string? username, string? pas
             return false;
 
         if (!AuthenticationHeaderValue.TryParse(authorizationHeader, out var header)
-            || !"Basic".Equals(header.Scheme, StringComparison.OrdinalIgnoreCase)
+            || !header.Scheme.iEquals("Basic")
             || string.IsNullOrEmpty(header.Parameter))
             return false;
 

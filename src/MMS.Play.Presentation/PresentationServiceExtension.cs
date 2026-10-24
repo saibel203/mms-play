@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using MMS.Play.Presentation.ExceptionHandlers;
 using MMS.Play.Presentation.Models.Settings;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -25,6 +26,7 @@ public static class PresentationServiceExtension
 
         // unhandled exceptions and empty error responses (404, 405...) are returned as RFC 9457 problem details
         services.AddProblemDetails();
+        services.AddExceptionHandler<ValidationFailedExceptionHandler>();
 
         services.AddVersioning();
         services.AddSwagger(configuration);

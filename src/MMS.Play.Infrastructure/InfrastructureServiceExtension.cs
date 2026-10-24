@@ -4,15 +4,22 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using FluentStorage;
+using FluentStorage.Storage;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Logging;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Scores;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Storage;
 using MMS.Play.Infrastructure.BackgroundJobs;
 using MMS.Play.Infrastructure.HealthChecks;
 using MMS.Play.Infrastructure.Logging;
 using MMS.Play.Infrastructure.Metrics;
 using MMS.Play.Infrastructure.Models.Settings;
 using MMS.Play.Infrastructure.Persistence;
+using MMS.Play.Infrastructure.Scores;
+using MMS.Play.Infrastructure.Storage;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -44,13 +51,18 @@ public static class InfrastructureServiceExtension
             .ValidateOnStart();
         services.AddScoped<ILogCleanupService, LogCleanupService>();
 
+        services.AddDocumentStorage(configuration);
+        services.AddScores(configuration);
+
         services.AddBackgroundJobs(configuration, connectionString);
 
         services.AddHealthChecks()
             // the API cannot serve requests without the database
             .AddDbContextCheck<ApplicationDbContext>("database", HealthStatus.Unhealthy)
             // without workers jobs pile up, but the API itself keeps working
-            .AddCheck<HangfireHealthCheck>("hangfire", HealthStatus.Degraded);
+            .AddCheck<HangfireHealthCheck>("hangfire", HealthStatus.Degraded)
+            // scores cannot be uploaded or opened, but listing them still works
+            .AddCheck<DocumentStorageHealthCheck>("document-storage", HealthStatus.Degraded);
 
         // the connection string allows a 900s connect timeout, a probe must fail long before that
         services.PostConfigure<HealthCheckServiceOptions>(options =>
@@ -86,6 +98,48 @@ public static class InfrastructureServiceExtension
             IsReadOnlyFunc = _ => settings.ReadOnly,
             Authorization = [new BasicAuthDashboardAuthorizationFilter(settings.Username, settings.Password)]
         });
+    }
+
+    private static void AddDocumentStorage(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<DocumentStorageSettings>()
+            .Bind(configuration.GetSection(DocumentStorageSettings.SectionName))
+            .Validate(settings => Enum.IsDefined(settings.Provider), "DocumentStorage:Provider is not supported")
+            .Validate(
+                settings => settings.Provider != DocumentStorageProvider.Local || !string.IsNullOrWhiteSpace(settings.Local.RootPath),
+                "DocumentStorage:Local:RootPath is required for the Local provider")
+            .ValidateOnStart();
+
+        // a store holds the provider client and is thread safe, one instance serves the whole application
+        services.AddSingleton(serviceProvider => CreateDocumentStore(
+            serviceProvider.GetRequiredService<IOptions<DocumentStorageSettings>>().Value,
+            serviceProvider.GetRequiredService<IHostEnvironment>()));
+
+        services.AddSingleton<IDocumentManager, DocumentManager>();
+    }
+
+    private static IStore CreateDocumentStore(DocumentStorageSettings settings, IHostEnvironment environment)
+    {
+        switch (settings.Provider)
+        {
+            case DocumentStorageProvider.Local:
+                var rootPath = Path.GetFullPath(settings.Local.RootPath, environment.ContentRootPath);
+                Directory.CreateDirectory(rootPath);
+                return StorageFactory.Disk(rootPath);
+
+            default:
+                throw new InvalidOperationException($"Document storage provider '{settings.Provider}' is not supported.");
+        }
+    }
+
+    private static void AddScores(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<ScoreSettings>()
+            .Bind(configuration.GetSection(ScoreSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddScoped<IScoreService, ScoreService>();
     }
 
     private static void AddBackgroundJobs(this IServiceCollection services, IConfiguration configuration, string connectionString)

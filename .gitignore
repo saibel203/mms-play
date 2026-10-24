@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Logs
 src/MMS.Play.Web/logs
+
+# Local document storage (uploaded scores)
+src/MMS.Play.Web/@data/
+@data/
