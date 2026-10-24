@@ -1,6 +1,8 @@
 ﻿using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,15 +11,19 @@ using FluentStorage.Storage;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using MMS.Play.Contracts.Authorization;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Identity;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Logging;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Scores;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Storage;
 using MMS.Play.Infrastructure.BackgroundJobs;
 using MMS.Play.Infrastructure.HealthChecks;
+using MMS.Play.Infrastructure.Identity;
 using MMS.Play.Infrastructure.Logging;
 using MMS.Play.Infrastructure.Metrics;
 using MMS.Play.Infrastructure.Models.Settings;
 using MMS.Play.Infrastructure.Persistence;
+using MMS.Play.Infrastructure.Persistence.Entities;
 using MMS.Play.Infrastructure.Scores;
 using MMS.Play.Infrastructure.Storage;
 using OpenTelemetry.Exporter;
@@ -32,6 +38,9 @@ public static class InfrastructureServiceExtension
     private const string ConnectionStringName = "DefaultConnection";
     private static readonly TimeSpan HealthCheckTimeout = TimeSpan.FromSeconds(5);
 
+    private const string AuthCookieName = "MMS.Play.Auth";
+    private static readonly TimeSpan AuthCookieLifetime = TimeSpan.FromDays(14);
+
     public static IServiceCollection AddInfrastructureService(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
@@ -44,12 +53,15 @@ public static class InfrastructureServiceExtension
         services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<DatabaseInitializer>();
 
+        services.AddIdentityService(configuration);
+
         services.AddOptions<LogCleanupSettings>()
             .Bind(configuration.GetSection(LogCleanupSettings.SectionName))
             .Configure(settings => settings.LogFilePath = configuration[LogCleanupSettings.SerilogFilePathKey])
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<ILogCleanupService, LogCleanupService>();
+        services.AddScoped<ILogQueryService, LogQueryService>();
 
         services.AddDocumentStorage(configuration);
         services.AddScores(configuration);
@@ -83,7 +95,7 @@ public static class InfrastructureServiceExtension
     }
 
     /// <summary>
-    /// Maps the Hangfire dashboard protected by Basic auth. Call after UseRouting.
+    /// Maps the Hangfire dashboard, available to admins only. Call after UseAuthentication.
     /// </summary>
     public static IApplicationBuilder UseJobsDashboard(this IApplicationBuilder app)
     {
@@ -96,8 +108,60 @@ public static class InfrastructureServiceExtension
             DashboardTitle = settings.Title,
             DisplayStorageConnectionString = false,
             IsReadOnlyFunc = _ => settings.ReadOnly,
-            Authorization = [new BasicAuthDashboardAuthorizationFilter(settings.Username, settings.Password)]
+            Authorization = [new AdminDashboardAuthorizationFilter()]
         });
+    }
+
+    private static void AddIdentityService(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<IdentitySettings>()
+            .Bind(configuration.GetSection(IdentitySettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                settings => settings.SeedUsers.All(user =>
+                    !string.IsNullOrWhiteSpace(user.UserName)
+                    && !string.IsNullOrWhiteSpace(user.Password)
+                    && Roles.All.Contains(user.Role)),
+                $"Identity:SeedUsers entries need UserName, Password and a Role out of: {string.Join(", ", Roles.All)}")
+            .ValidateOnStart();
+
+        // SignInManager.SignOutAsync signs out of the external and two-factor schemes too, so all Identity cookies are registered
+        services.AddAuthentication(IdentityConstants.ApplicationScheme)
+            .AddIdentityCookies();
+
+        services.AddIdentityCore<User>(options =>
+            {
+                options.Password.RequiredLength = 8;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            })
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddSignInManager();
+
+        services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.Name = AuthCookieName;
+            // the client calls the API from the same site (dev proxy / reverse proxy), Strict keeps the cookie out of cross-site requests (CSRF)
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.Cookie.HttpOnly = true;
+            options.ExpireTimeSpan = AuthCookieLifetime;
+            options.SlidingExpiration = true;
+
+            // an API answers with status codes, the default handler would redirect to /Account/Login
+            options.Events.OnRedirectToLogin = context => WriteStatusCode(context.Response, StatusCodes.Status401Unauthorized);
+            options.Events.OnRedirectToAccessDenied = context => WriteStatusCode(context.Response, StatusCodes.Status403Forbidden);
+        });
+
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IdentitySeeder>();
+    }
+
+    // the empty body is turned into problem details by UseStatusCodePages
+    private static Task WriteStatusCode(HttpResponse response, int statusCode)
+    {
+        response.StatusCode = statusCode;
+        return Task.CompletedTask;
     }
 
     private static void AddDocumentStorage(this IServiceCollection services, IConfiguration configuration)
@@ -221,6 +285,17 @@ public static class InfrastructureServiceExtension
         var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
 
         await initializer.InitializeDatabaseAsync();
+    }
+
+    /// <summary>
+    /// Creates the roles and the "Identity:SeedUsers" accounts that do not exist yet. Requires a migrated database.
+    /// </summary>
+    public static async Task SeedIdentityAsync(this IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
+
+        await seeder.SeedAsync();
     }
 
     /// <summary>

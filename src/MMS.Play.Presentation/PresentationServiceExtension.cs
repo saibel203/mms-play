@@ -1,11 +1,13 @@
 using System.Text.Json.Serialization;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using MMS.Play.Contracts.Authorization;
 using MMS.Play.Presentation.ExceptionHandlers;
 using MMS.Play.Presentation.Models.Settings;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -27,6 +29,14 @@ public static class PresentationServiceExtension
         // unhandled exceptions and empty error responses (404, 405...) are returned as RFC 9457 problem details
         services.AddProblemDetails();
         services.AddExceptionHandler<ValidationFailedExceptionHandler>();
+
+        // everything requires a signed-in user with a role unless marked [AllowAnonymous] or [Authorize] with its own rules;
+        // also covers middleware without endpoints (the Hangfire dashboard), a user without a role (e.g. not approved yet) gets 403
+        services.AddAuthorizationBuilder()
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireRole(Roles.Admin, Roles.Student)
+                .Build());
 
         services.AddVersioning();
         services.AddSwagger(configuration);

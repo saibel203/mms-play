@@ -1,7 +1,9 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using MMS.Play.Contracts.Authorization;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Scores;
 using MMS.Play.Contracts.Models.Common;
 using MMS.Play.Contracts.Models.Scores;
@@ -11,7 +13,7 @@ using MMS.Play.Presentation.Models.Requests.Scores;
 namespace MMS.Play.Presentation.Controllers;
 
 /// <summary>
-/// Guitar Pro and MusicXML files played by the tab player.
+/// Guitar Pro and MusicXML files played by the tab player. Reading is open to every role, changes are admin only.
 /// </summary>
 [ApiVersion(1)]
 public class ScoresController(IScoreService scoreService) : BaseController
@@ -31,11 +33,14 @@ public class ScoresController(IScoreService scoreService) : BaseController
     /// <response code="201">The score was stored, the Location header points to it.</response>
     /// <response code="200">The same file had already been uploaded, the existing score is returned.</response>
     /// <response code="400">The file is missing, empty, too large, of an unsupported type or its content does not match the extension.</response>
+    /// <response code="403">The user is not an admin.</response>
     [HttpPost]
+    [Authorize(Roles = Roles.Admin)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType<ScoreDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ScoreDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
     public async Task<IActionResult> Upload([FromForm] UploadScoreRequest request, CancellationToken cancellationToken)
     {
         await using var content = request.File.OpenReadStream();
@@ -126,9 +131,12 @@ public class ScoresController(IScoreService scoreService) : BaseController
     /// <param name="id">Score identifier.</param>
     /// <param name="cancellationToken">Aborted when the client disconnects.</param>
     /// <response code="204">The score was deleted.</response>
+    /// <response code="403">The user is not an admin.</response>
     /// <response code="404">There is no score with this identifier.</response>
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken) =>
         await scoreService.DeleteAsync(id, cancellationToken) ? NoContent() : ScoreNotFound(id);

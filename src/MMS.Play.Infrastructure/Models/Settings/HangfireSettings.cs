@@ -28,12 +28,6 @@ public class HangfireDashboardSettings
     public string Title { get; set; } = "MMS.Play Jobs";
 
     /// <summary>
-    /// Basic auth credentials. When empty, the dashboard rejects every request.
-    /// </summary>
-    public string? Username { get; set; }
-    public string? Password { get; set; }
-
-    /// <summary>
     /// Hides delete/requeue/trigger buttons.
     /// </summary>
     public bool ReadOnly { get; set; }

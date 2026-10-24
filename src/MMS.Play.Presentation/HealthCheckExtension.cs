@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace MMS.Play.Presentation;
 
@@ -12,8 +10,10 @@ public static class HealthCheckExtension
 
     /// <summary>
     /// /health/live - the process responds, runs no checks. Use for liveness probes and Docker HEALTHCHECK.
-    /// /health/ready - runs every registered check and returns a JSON report. Use for readiness probes and monitoring.
+    /// /health/ready - runs every registered check and answers with the overall status only. Use for readiness probes.
     /// Unhealthy returns 503, Degraded still returns 200 so the instance keeps receiving traffic.
+    /// Both are anonymous because probes cannot sign in, so neither shows details:
+    /// the per-check report is GET /api/v1/health, admins only (HealthController).
     /// </summary>
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -21,34 +21,10 @@ public static class HealthCheckExtension
         endpoints.MapHealthChecks($"{BasePath}/live", new HealthCheckOptions
         {
             Predicate = _ => false
-        });
+        }).AllowAnonymous();
 
-        endpoints.MapHealthChecks($"{BasePath}/ready", new HealthCheckOptions
-        {
-            ResponseWriter = WriteJsonReportAsync
-        });
+        endpoints.MapHealthChecks($"{BasePath}/ready").AllowAnonymous();
 
         return endpoints;
-    }
-
-    // exceptions are left out on purpose: SqlException messages contain server names, the health check service logs them instead
-    private static Task WriteJsonReportAsync(HttpContext context, HealthReport report)
-    {
-        var response = new
-        {
-            Status = report.Status.ToString(),
-            report.TotalDuration,
-            Checks = report.Entries.ToDictionary(
-                entry => entry.Key,
-                entry => new
-                {
-                    Status = entry.Value.Status.ToString(),
-                    entry.Value.Description,
-                    entry.Value.Duration,
-                    entry.Value.Data
-                })
-        };
-
-        return context.Response.WriteAsJsonAsync(response);
     }
 }

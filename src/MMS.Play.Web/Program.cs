@@ -22,6 +22,8 @@ try
     if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
         await app.Services.InitializeDatabaseAsync();
 
+    await app.Services.SeedIdentityAsync();
+
     app.Services.RegisterRecurringJobs();
 
     // outermost, so errors from every middleware below are turned into problem details
@@ -36,6 +38,11 @@ try
     app.UseCors();
 
     app.UseRouting();
+
+    // before the dashboard: its filter reads the user from the cookie, and the fallback policy covers it too
+    app.UseAuthentication();
+    app.UseAuthorization();
+
     app.UseJobsDashboard();
 
     app.MapHealthEndpoints();
