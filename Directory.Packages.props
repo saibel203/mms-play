@@ -46,6 +46,11 @@
     <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
   </ItemGroup>
 
+  <ItemGroup Label="Storage">
+    <!-- provider modules (FluentStorage.AWS, FluentStorage.Azure.Blobs, FluentStorage.GCP) are released with the same version -->
+    <PackageVersion Include="FluentStorage" Version="8.0.22" />
+  </ItemGroup>
+
   <ItemGroup Label="Swagger">
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.0" />
   </ItemGroup>
