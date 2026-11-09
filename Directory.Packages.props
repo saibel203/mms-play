@@ -55,6 +55,10 @@
     <PackageVersion Include="FluentStorage" Version="8.0.22" />
   </ItemGroup>
 
+  <ItemGroup Label="Telegram">
+    <PackageVersion Include="Telegram.Bot" Version="22.10.3.3" />
+  </ItemGroup>
+
   <ItemGroup Label="Swagger">
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.0" />
   </ItemGroup>

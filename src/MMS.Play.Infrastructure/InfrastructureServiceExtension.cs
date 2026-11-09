@@ -6,30 +6,43 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using FluentStorage;
 using FluentStorage.Storage;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMS.Play.Contracts.Authorization;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Homework;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Identity;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Lessons;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Logging;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Notifications;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Scores;
 using MMS.Play.Contracts.InfrastructureServiceAbstractions.Storage;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Trial;
+using MMS.Play.Contracts.InfrastructureServiceAbstractions.Calendar;
 using MMS.Play.Infrastructure.BackgroundJobs;
+using MMS.Play.Infrastructure.Calendar;
 using MMS.Play.Infrastructure.HealthChecks;
+using MMS.Play.Infrastructure.Homeworks;
 using MMS.Play.Infrastructure.Identity;
+using MMS.Play.Infrastructure.Lessons;
 using MMS.Play.Infrastructure.Logging;
 using MMS.Play.Infrastructure.Metrics;
 using MMS.Play.Infrastructure.Models.Settings;
+using MMS.Play.Infrastructure.Notifications;
 using MMS.Play.Infrastructure.Persistence;
 using MMS.Play.Infrastructure.Persistence.Entities;
 using MMS.Play.Infrastructure.Scores;
 using MMS.Play.Infrastructure.Storage;
+using MMS.Play.Infrastructure.Telegram;
+using MMS.Play.Infrastructure.Trial;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
+using Telegram.Bot;
 
 namespace MMS.Play.Infrastructure;
 
@@ -40,6 +53,8 @@ public static class InfrastructureServiceExtension
 
     private const string AuthCookieName = "MMS.Play.Auth";
     private static readonly TimeSpan AuthCookieLifetime = TimeSpan.FromDays(14);
+
+    private const string TelegramHttpClientName = "telegram";
 
     public static IServiceCollection AddInfrastructureService(this IServiceCollection services, IConfiguration configuration)
     {
@@ -66,7 +81,15 @@ public static class InfrastructureServiceExtension
         services.AddDocumentStorage(configuration);
         services.AddScores(configuration);
 
+        services.AddOptions<PublicSiteSettings>()
+            .Bind(configuration.GetSection(PublicSiteSettings.SectionName))
+            .Validate(settings => settings.IsValid, "PublicSite:BaseUrl must be empty or an absolute http(s) address, e.g. \"https://school.example.com\"")
+            .ValidateOnStart();
+
         services.AddBackgroundJobs(configuration, connectionString);
+
+        services.AddTelegram(configuration);
+        services.AddLessons(configuration);
 
         services.AddHealthChecks()
             // the API cannot serve requests without the database
@@ -236,6 +259,161 @@ public static class InfrastructureServiceExtension
             options.WorkerCount = settings.WorkerCount;
             options.Queues = settings.Queues;
         });
+    }
+
+    private static void AddTelegram(this IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(TelegramSettings.SectionName);
+
+        services.AddOptions<TelegramSettings>()
+            .Bind(section)
+            .ValidateDataAnnotations()
+            .Validate(
+                settings => !settings.Enabled || TelegramSettings.IsValidToken(settings.BotToken),
+                "Telegram:BotToken must be the token from @BotFather (\"123456789:AA...\") when Telegram:Enabled is true")
+            .ValidateOnStart();
+
+        services.AddOptions<LessonReminderSettings>()
+            .Bind(configuration.GetSection(LessonReminderSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                settings => TelegramHtml.Validate(settings.MessageTemplate) is null,
+                "LessonReminders:MessageTemplate is not valid Telegram HTML")
+            .Validate(
+                settings => TelegramHtml.Validate(settings.ParentMessageTemplate) is null,
+                "LessonReminders:ParentMessageTemplate is not valid Telegram HTML")
+            .ValidateOnStart();
+
+        services.AddOptions<PaymentReminderSettings>()
+            .Bind(configuration.GetSection(PaymentReminderSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                settings => TelegramHtml.Validate(settings.StudentMessageTemplate) is null
+                            && TelegramHtml.Validate(settings.ParentMessageTemplate) is null,
+                "PaymentReminders message templates are not valid Telegram HTML")
+            .ValidateOnStart();
+
+        services.AddOptions<HomeworkReminderSettings>()
+            .Bind(configuration.GetSection(HomeworkReminderSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                settings => TelegramHtml.Validate(settings.AssignedMessageTemplate) is null
+                            && TelegramHtml.Validate(settings.ReminderMessageTemplate) is null,
+                "HomeworkReminders message templates are not valid Telegram HTML")
+            .ValidateOnStart();
+
+        services.AddOptions<AdminDigestSettings>()
+            .Bind(configuration.GetSection(AdminDigestSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // the admin page works with the database only, also while the bot is turned off
+        services.AddScoped<INotificationSettingsService, NotificationSettingsService>();
+        services.AddScoped<TelegramSubscriberService>();
+        services.AddScoped<ITelegramSubscriberService>(serviceProvider => serviceProvider.GetRequiredService<TelegramSubscriberService>());
+        services.AddScoped<IMessageTemplateService, MessageTemplateService>();
+        services.AddScoped<IParentBroadcastService, ParentBroadcastService>();
+        services.AddScoped<InviteService>();
+        services.AddScoped<IInviteService>(serviceProvider => serviceProvider.GetRequiredService<InviteService>());
+        // homework is given on the website and practised on the public page also while the bot is turned off
+        services.AddScoped<PracticeLinks>();
+        services.AddScoped<IHomeworkService, HomeworkService>();
+        services.AddScoped<IPracticeService, PracticeService>();
+
+        // decides what gets registered, so it is read before the container is built
+        var settings = section.Get<TelegramSettings>() ?? new TelegramSettings();
+        if (!settings.Enabled)
+            return;
+
+        // the URL of every Bot API call contains the token: keep "System.Net.Http.HttpClient" logging at Warning or above
+        services.AddHttpClient(TelegramHttpClientName)
+            .AddTypedClient<ITelegramBotClient>((httpClient, serviceProvider) => new TelegramBotClient(
+                serviceProvider.GetRequiredService<IOptions<TelegramSettings>>().Value.BotToken,
+                httpClient));
+
+        services.AddSingleton<TelegramUpdateHandler>();
+        services.AddScoped<RescheduleBotHandler>();
+        services.AddScoped<ParentBroadcastBotHandler>();
+        services.AddScoped<PaymentBotHandler>();
+        services.AddScoped<CancellationBotHandler>();
+        services.AddScoped<TrialBotHandler>();
+        services.AddScoped<CalendarBotHandler>();
+        // replaces NullTrialNotifier (TryAdd in AddLessons runs after this)
+        services.AddScoped<ITrialNotifier, TelegramTrialNotifier>();
+        services.AddScoped<HomeworkBotHandler>();
+        // replaces NullHomeworkNotifier and NullHomeworkReminderService (TryAdd in AddLessons runs after this)
+        services.AddScoped<IHomeworkNotifier, TelegramHomeworkNotifier>();
+        services.AddScoped<IHomeworkReminderService, HomeworkReminderService>();
+        // replaces NullCancellationNotifier (TryAdd in AddLessons runs after this)
+        services.AddScoped<ICancellationNotifier, TelegramCancellationNotifier>();
+        // replaces NullPaymentReminderService (TryAdd in AddLessons runs after this)
+        services.AddScoped<IPaymentReminderService, PaymentReminderService>();
+        // replaces NullAdminDigestService (TryAdd in AddLessons runs after this)
+        services.AddScoped<IAdminDigestService, AdminDigestService>();
+        // replaces NullParentBroadcastSender (TryAdd in AddLessons runs after this)
+        services.AddScoped<IParentBroadcastSender, TelegramParentBroadcastSender>();
+        // replaces NullRescheduleNotifier (TryAdd in AddLessons runs after this)
+        services.AddScoped<IRescheduleNotifier, TelegramRescheduleNotifier>();
+        services.AddHostedService<TelegramPollingService>();
+
+        services.AddScoped<ILessonReminderService, LessonReminderService>();
+    }
+
+    private static void AddLessons(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<LessonSettings>()
+            .Bind(configuration.GetSection(LessonSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                settings => TimeZoneInfo.TryFindSystemTimeZoneById(settings.TimeZoneId, out _),
+                "Lessons:TimeZoneId is not a known time zone, e.g. \"Europe/Kyiv\"")
+            .ValidateOnStart();
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<SchoolClock>();
+
+        services.AddScoped<ILessonService, LessonService>();
+        services.AddScoped<ILessonStatsService, LessonStatsService>();
+        services.AddScoped<SchoolSettingsDefaults>();
+        services.AddScoped<ILessonSettingsService, LessonSettingsService>();
+        services.AddScoped<ISchoolResourceService, SchoolResourceService>();
+        services.AddScoped<ILessonPaymentService, LessonPaymentService>();
+        services.AddScoped<LessonCancellationService>();
+        services.AddScoped<LessonDataSeeder>();
+
+        services.AddOptions<TrialBookingSettings>()
+            .Bind(configuration.GetSection(TrialBookingSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddScoped<TrialEligibility>();
+        services.AddScoped<TrialBookingService>();
+        services.AddScoped<ITrialBookingService>(serviceProvider => serviceProvider.GetRequiredService<TrialBookingService>());
+        // without the bot requests wait on the website, nobody is told
+        services.TryAddScoped<ITrialNotifier, NullTrialNotifier>();
+        services.AddScoped<ICalendarFeedService, CalendarFeedService>();
+
+        services.AddScoped<LessonRescheduleService>();
+        services.AddScoped<ILessonRescheduleService>(serviceProvider => serviceProvider.GetRequiredService<LessonRescheduleService>());
+        // without the bot nobody is told in Telegram, requests are answered on the website
+        services.TryAddScoped<IRescheduleNotifier, NullRescheduleNotifier>();
+        // without the bot broadcasts for parents are refused
+        services.TryAddScoped<IParentBroadcastSender, NullParentBroadcastSender>();
+        services.TryAddScoped<IPaymentReminderService, NullPaymentReminderService>();
+        services.TryAddScoped<IAdminDigestService, NullAdminDigestService>();
+        services.TryAddScoped<ICancellationNotifier, NullCancellationNotifier>();
+        services.TryAddScoped<IHomeworkNotifier, NullHomeworkNotifier>();
+        services.TryAddScoped<IHomeworkReminderService, NullHomeworkReminderService>();
+    }
+
+    /// <summary>
+    /// Creates the teachers and rooms when there are none, and demo lessons with "Lessons:SeedDemoData". Requires a migrated database.
+    /// </summary>
+    public static async Task SeedLessonsAsync(this IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<LessonDataSeeder>();
+
+        await seeder.SeedAsync();
     }
 
     private static void AddOpenTelemetryMetrics(this IServiceCollection services, IConfiguration configuration)

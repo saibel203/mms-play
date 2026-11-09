@@ -23,6 +23,7 @@ try
         await app.Services.InitializeDatabaseAsync();
 
     await app.Services.SeedIdentityAsync();
+    await app.Services.SeedLessonsAsync();
 
     app.Services.RegisterRecurringJobs();
 

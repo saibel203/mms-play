@@ -11,6 +11,23 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<LogEntry> Logs => Set<LogEntry>();
     public DbSet<Score> Scores => Set<Score>();
+    public DbSet<TelegramSubscriber> TelegramSubscribers => Set<TelegramSubscriber>();
+    public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
+    public DbSet<Teacher> Teachers => Set<Teacher>();
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<Lesson> Lessons => Set<Lesson>();
+    public DbSet<LessonReminderDelivery> LessonReminderDeliveries => Set<LessonReminderDelivery>();
+    public DbSet<SchoolSettings> SchoolSettings => Set<SchoolSettings>();
+    public DbSet<LessonRescheduleRequest> LessonRescheduleRequests => Set<LessonRescheduleRequest>();
+    public DbSet<ParentBroadcast> ParentBroadcasts => Set<ParentBroadcast>();
+    public DbSet<ParentBroadcastDelivery> ParentBroadcastDeliveries => Set<ParentBroadcastDelivery>();
+    public DbSet<PaymentReminderDelivery> PaymentReminderDeliveries => Set<PaymentReminderDelivery>();
+    public DbSet<Invite> Invites => Set<Invite>();
+    public DbSet<AdminDigestDelivery> AdminDigestDeliveries => Set<AdminDigestDelivery>();
+    public DbSet<Homework> Homeworks => Set<Homework>();
+    public DbSet<HomeworkPractice> HomeworkPractices => Set<HomeworkPractice>();
+    public DbSet<HomeworkReminderDelivery> HomeworkReminderDeliveries => Set<HomeworkReminderDelivery>();
+    public DbSet<TrialRequest> TrialRequests => Set<TrialRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

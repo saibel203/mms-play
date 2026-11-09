@@ -22,6 +22,290 @@ namespace MMS.Play.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.AdminDigestDelivery", b =>
+                {
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Date");
+
+                    b.ToTable("AdminDigestDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Homework", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("FromBar")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid?>("ScoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("StartTempoPercent")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("TargetTempoPercent")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("ToBar")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScoreId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StudentId", "Status");
+
+                    b.ToTable("Homeworks", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.HomeworkPractice", b =>
+                {
+                    b.Property<Guid>("HomeworkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("PracticedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("HomeworkId", "Date");
+
+                    b.ToTable("HomeworkPractices", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.HomeworkReminderDelivery", b =>
+                {
+                    b.Property<Guid>("SubscriberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("SubscriberId", "Date");
+
+                    b.ToTable("HomeworkReminderDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Invite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.PrimitiveCollection<string>("ChildIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.PrimitiveCollection<string>("UsedByIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Invites", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Lesson", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CancelledBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CancelledByName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsLateCancellation")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid?>("RescheduledToId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RescheduledToId");
+
+                    b.HasIndex("Date", "StartTime");
+
+                    b.HasIndex("RoomId", "Date");
+
+                    b.HasIndex("SeriesId", "Date");
+
+                    b.HasIndex("StudentId", "Date");
+
+                    b.HasIndex("TeacherId", "Date");
+
+                    b.ToTable("Lessons", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.LessonReminderDelivery", b =>
+                {
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubscriberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("SlotUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("LessonId", "SubscriberId", "SlotUtc");
+
+                    b.ToTable("LessonReminderDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.LessonRescheduleRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecidedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("ProposedDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("ProposedRoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly>("ProposedTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<long>("StudentChatId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProposedRoomId");
+
+                    b.HasIndex("LessonId", "Status");
+
+                    b.ToTable("LessonRescheduleRequests", (string)null);
+                });
+
             modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.LogEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -60,6 +344,256 @@ namespace MMS.Play.Infrastructure.Persistence.Migrations
                     b.HasIndex("Level", "TimeStamp");
 
                     b.ToTable("Logs", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.MessageTemplate", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("MessageTemplates", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.ParentBroadcast", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AllowTextAnswer")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Audience")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateOnly?>("LessonDate")
+                        .HasColumnType("date");
+
+                    b.PrimitiveCollection<string>("Options")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(3500)
+                        .HasColumnType("nvarchar(3500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.ToTable("ParentBroadcasts", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.ParentBroadcastDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("AnswerOption")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("AnsweredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("BroadcastId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ChildName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateOnly?>("LessonDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly?>("LessonTime")
+                        .HasColumnType("time");
+
+                    b.Property<int?>("MessageId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ParentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BroadcastId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("ChatId", "MessageId");
+
+                    b.ToTable("ParentBroadcastDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.PaymentReminderDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubscriberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId", "SentAtUtc");
+
+                    b.HasIndex("SubscriberId", "StudentId", "SentAtUtc");
+
+                    b.ToTable("PaymentReminderDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Rooms", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.RoomHours", b =>
+                {
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("FirstLessonAt")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("LastLessonAt")
+                        .HasColumnType("time");
+
+                    b.HasKey("RoomId", "DayOfWeek");
+
+                    b.ToTable("RoomHours", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.SchoolSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("AdminDigestEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeOnly>("AdminDigestTime")
+                        .HasColumnType("time");
+
+                    b.Property<decimal>("DefaultLessonPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<TimeOnly>("HomeworkReminderTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("HomeworkRemindersEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PaymentDetails")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PaymentLink")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PaymentReminderEveryDays")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("PaymentReminderTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("PaymentRemindersEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ReminderDaysBefore")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReminderIntervalMinutes")
+                        .HasColumnType("int");
+
+                    b.PrimitiveCollection<string>("ReminderTimes")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RemindersEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("TrialBookingEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SchoolSettings", (string)null);
                 });
 
             modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Score", b =>
@@ -113,6 +647,153 @@ namespace MMS.Play.Infrastructure.Persistence.Migrations
                     b.HasIndex("UploadedAtUtc");
 
                     b.ToTable("Scores", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Teacher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .IsUnicode(false)
+                        .HasColumnType("char(7)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Teachers", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccessToken")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsParent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LanguageCode")
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("LastNotifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("RemindersEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("SubscribedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UnsubscribedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessToken")
+                        .IsUnique()
+                        .HasFilter("[AccessToken] IS NOT NULL");
+
+                    b.HasIndex("TelegramUserId")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "TelegramUserId");
+
+                    b.ToTable("TelegramSubscribers", (string)null);
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.TrialRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Contact")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateOnly?>("PreferredDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("PreferredTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SubscriberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.HasIndex("SubscriberId", "Status");
+
+                    b.ToTable("TrialRequests", (string)null);
                 });
 
             modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.User", b =>
@@ -312,6 +993,179 @@ namespace MMS.Play.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TelegramSubscriberChildren", b =>
+                {
+                    b.Property<Guid>("ParentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ParentId", "ChildId");
+
+                    b.HasIndex("ChildId");
+
+                    b.ToTable("TelegramSubscriberChildren");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Homework", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Score", "Score")
+                        .WithMany()
+                        .HasForeignKey("ScoreId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Score");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.HomeworkPractice", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Homework", "Homework")
+                        .WithMany("Practices")
+                        .HasForeignKey("HomeworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Homework");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Lesson", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("RescheduledToId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Teacher", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.LessonReminderDelivery", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.LessonRescheduleRequest", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Lesson", "Lesson")
+                        .WithMany("RescheduleRequests")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Room", "ProposedRoom")
+                        .WithMany()
+                        .HasForeignKey("ProposedRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("MMS.Play.Infrastructure.Persistence.Entities.TelegramMessageRef", "AdminMessages", b1 =>
+                        {
+                            b1.Property<Guid>("LessonRescheduleRequestId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate();
+
+                            b1.Property<long>("ChatId");
+
+                            b1.Property<int>("MessageId");
+
+                            b1.HasKey("LessonRescheduleRequestId", "__synthesizedOrdinal");
+
+                            b1.ToTable("LessonRescheduleRequests");
+
+                            b1
+                                .ToJson("AdminMessages")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.WithOwner()
+                                .HasForeignKey("LessonRescheduleRequestId");
+                        });
+
+                    b.Navigation("AdminMessages");
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("ProposedRoom");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.ParentBroadcastDelivery", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.ParentBroadcast", "Broadcast")
+                        .WithMany("Deliveries")
+                        .HasForeignKey("BroadcastId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Broadcast");
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.RoomHours", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Room", null)
+                        .WithMany("Hours")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.TrialRequest", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", "Subscriber")
+                        .WithMany()
+                        .HasForeignKey("SubscriberId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("Subscriber");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -361,6 +1215,41 @@ namespace MMS.Play.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TelegramSubscriberChildren", b =>
+                {
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", null)
+                        .WithMany()
+                        .HasForeignKey("ChildId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("MMS.Play.Infrastructure.Persistence.Entities.TelegramSubscriber", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Homework", b =>
+                {
+                    b.Navigation("Practices");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Lesson", b =>
+                {
+                    b.Navigation("RescheduleRequests");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.ParentBroadcast", b =>
+                {
+                    b.Navigation("Deliveries");
+                });
+
+            modelBuilder.Entity("MMS.Play.Infrastructure.Persistence.Entities.Room", b =>
+                {
+                    b.Navigation("Hours");
                 });
 #pragma warning restore 612, 618
         }

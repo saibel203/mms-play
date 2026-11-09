@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMS.Play.Jobs.Logging;
 using MMS.Play.Jobs.Models.Settings;
+using MMS.Play.Jobs.Notifications;
 
 namespace MMS.Play.Jobs;
 
@@ -17,6 +18,18 @@ public static class JobsServiceExtension
             .ValidateOnStart();
 
         services.AddScoped<CleanupLogsJob>();
+
+        var lessonRemindersSection = configuration.GetSection(SendLessonRemindersJobSettings.SectionName);
+
+        services.AddOptions<SendLessonRemindersJobSettings>()
+            .Bind(lessonRemindersSection)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // the job needs ILessonReminderService, which exists only while the Telegram bot is enabled.
+        // Registered only when turned on: enabling the job without the bot then fails at startup (ValidateOnBuild in Development)
+        if ((lessonRemindersSection.Get<SendLessonRemindersJobSettings>() ?? new SendLessonRemindersJobSettings()).Enabled)
+            services.AddScoped<SendLessonRemindersJob>();
 
         return services;
     }
@@ -34,6 +47,20 @@ public static class JobsServiceExtension
             CleanupLogsJob.JobId,
             job => job.ExecuteAsync(CancellationToken.None),
             cleanupLogsSettings.Schedule);
+
+        var lessonRemindersSettings = serviceProvider.GetRequiredService<IOptions<SendLessonRemindersJobSettings>>().Value;
+        if (lessonRemindersSettings.Enabled)
+        {
+            recurringJobManager.AddOrUpdate<SendLessonRemindersJob>(
+                SendLessonRemindersJob.JobId,
+                job => job.ExecuteAsync(CancellationToken.None),
+                lessonRemindersSettings.Schedule);
+        }
+        else
+        {
+            // the job stays in Hangfire storage after it was turned off, it has to be removed explicitly
+            recurringJobManager.RemoveIfExists(SendLessonRemindersJob.JobId);
+        }
 
         return serviceProvider;
     }

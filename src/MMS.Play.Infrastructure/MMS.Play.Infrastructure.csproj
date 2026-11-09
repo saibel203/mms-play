@@ -21,6 +21,7 @@
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Serilog.Sinks.Grafana.Loki" />
     <PackageReference Include="Serilog.Sinks.MSSqlServer" />
+    <PackageReference Include="Telegram.Bot" />
   </ItemGroup>
 
   <ItemGroup>
